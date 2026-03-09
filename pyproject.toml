@@ -1,0 +1,20 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "syslens"
+version = "0.1.0"
+description = "Cross-platform CLI for detailed hardware and software system information"
+requires-python = ">=3.9"
+dependencies = [
+    "psutil>=5.9",
+    "rich>=13.0",
+    "typer>=0.9",
+]
+
+[project.scripts]
+syslens = "syslens.main:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["syslens"]
