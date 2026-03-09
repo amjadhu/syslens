@@ -1,0 +1,88 @@
+{
+  "platform": "Windows",
+  "generated_at": "2026-03-08 21:28:06",
+  "lookback_hours": 24,
+  "events": {
+    "driver_issues": [],
+    "disk_errors": [],
+    "service_failures": [],
+    "app_crashes": [],
+    "other": [
+      {
+        "time": "2026-03-08 13:22:09",
+        "id": 21,
+        "level": "Error",
+        "provider": "Microsoft-Windows-HAL",
+        "message": "The hardware real-time clock was not set because evaluation of the ACPI Time and Alarm Device method failed.  Status: 0x",
+        "severity": "warning",
+        "source": "event_log"
+      },
+      {
+        "time": "2026-03-08 13:22:09",
+        "id": 20,
+        "level": "Error",
+        "provider": "Microsoft-Windows-HAL",
+        "message": "The hardware real-time clock was not queried because evaluation of the ACPI Time and Alarm Device method failed.  Status",
+        "severity": "warning",
+        "source": "event_log"
+      },
+      {
+        "time": "2026-03-08 03:00:00",
+        "id": 21,
+        "level": "Error",
+        "provider": "Microsoft-Windows-HAL",
+        "message": "The hardware real-time clock was not set because evaluation of the ACPI Time and Alarm Device method failed.  Status: 0x",
+        "severity": "warning",
+        "source": "event_log"
+      },
+      {
+        "time": "2026-03-08 03:00:00",
+        "id": 20,
+        "level": "Error",
+        "provider": "Microsoft-Windows-HAL",
+        "message": "The hardware real-time clock was not queried because evaluation of the ACPI Time and Alarm Device method failed.  Status",
+        "severity": "warning",
+        "source": "event_log"
+      },
+      {
+        "time": "2026-03-08 01:17:54",
+        "id": 20,
+        "level": "Error",
+        "provider": "Microsoft-Windows-WindowsUpdateClient",
+        "message": "Installation Failure: Windows failed to install the following update with error 0x80073D02: 9NMPJ99VJBWV-Microsoft.YourP",
+        "severity": "warning",
+        "source": "event_log"
+      },
+      {
+        "time": "2026-03-08 01:17:53",
+        "id": 20,
+        "level": "Error",
+        "provider": "Microsoft-Windows-WindowsUpdateClient",
+        "message": "Installation Failure: Windows failed to install the following update with error 0x80073D02: 9NTXGKQ8P7N0-MicrosoftWindow",
+        "severity": "warning",
+        "source": "event_log"
+      },
+      {
+        "time": "2026-03-08 01:17:47",
+        "id": 20,
+        "level": "Error",
+        "provider": "Microsoft-Windows-WindowsUpdateClient",
+        "message": "Installation Failure: Windows failed to install the following update with error 0x80073D02: 9MV0B5HZVK9Z-Microsoft.Gamin",
+        "severity": "warning",
+        "source": "event_log"
+      }
+    ]
+  },
+  "heuristics": [
+    {
+      "category": "other",
+      "severity": "warning",
+      "message": "RAM usage is elevated at 84.8%",
+      "source": "heuristic"
+    }
+  ],
+  "event_count": 7,
+  "critical_count": 0,
+  "warning_count": 8,
+  "error": null
+}

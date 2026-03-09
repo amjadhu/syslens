@@ -202,6 +202,118 @@ def _render_processes(data):
     console.print(Columns([cpu_table, mem_table]))
 
 
+def _severity_color(sev):
+    return "red" if sev == "critical" else "yellow"
+
+
+def render_diagnose(data):
+    criticals = data["critical_count"]
+    warnings  = data["warning_count"]
+
+    if criticals > 0:
+        header_style = "bold red"
+        status_icon  = "[bold red]ISSUES FOUND[/bold red]"
+    elif warnings > 0:
+        header_style = "bold yellow"
+        status_icon  = "[bold yellow]WARNINGS DETECTED[/bold yellow]"
+    else:
+        header_style = "bold green"
+        status_icon  = "[bold green]ALL CLEAR[/bold green]"
+
+    console.print()
+    console.rule(f"[bold cyan]  SYSLENS DIAGNOSTIC REPORT  [/bold cyan]")
+    console.print()
+
+    summary = (
+        f"Platform: [cyan]{data['platform']}[/cyan]  •  "
+        f"Generated: [dim]{data['generated_at']}[/dim]  •  "
+        f"Lookback: [cyan]{data['lookback_hours']}h[/cyan]\n"
+        f"Events: [cyan]{data['event_count']}[/cyan]  •  "
+        f"Critical: [red]{criticals}[/red]  •  "
+        f"Warnings: [yellow]{warnings}[/yellow]  •  "
+        f"Status: {status_icon}"
+    )
+    if data.get("error"):
+        summary += f"\n[dim red]Note: {data['error']}[/dim red]"
+
+    console.print(Panel(summary, title=f"[{header_style}]Summary[/{header_style}]",
+                        border_style=header_style))
+    console.print()
+
+    CATEGORY_LABELS = {
+        "driver_issues":    ("Driver Issues",    "red"),
+        "disk_errors":      ("Disk Errors",      "magenta"),
+        "service_failures": ("Service Failures", "yellow"),
+        "app_crashes":      ("App Crashes",      "orange3"),
+        "other":            ("Other Errors",     "cyan"),
+    }
+
+    events = data.get("events", {})
+    any_events = False
+
+    for key, (label, color) in CATEGORY_LABELS.items():
+        findings = events.get(key, [])
+        if not findings:
+            continue
+        any_events = True
+
+        table = Table(box=box.SIMPLE, header_style=f"bold {color}", padding=(0, 1),
+                      show_lines=False)
+        table.add_column("Sev",      width=8)
+        table.add_column("Time",     style="dim", width=19, no_wrap=True)
+        table.add_column("Source",   width=28, no_wrap=True)
+        table.add_column("ID",       justify="right", width=6, style="dim")
+        table.add_column("Message")
+
+        for f in findings[:20]:
+            sev_c = _severity_color(f["severity"])
+            eid   = str(f["id"]) if f.get("id") else "—"
+            table.add_row(
+                f"[{sev_c}]{f['severity'].upper()}[/{sev_c}]",
+                f.get("time", ""),
+                f.get("provider", ""),
+                eid,
+                f.get("message", ""),
+            )
+        if len(findings) > 20:
+            table.add_row("", "", f"[dim]... and {len(findings) - 20} more[/dim]", "", "")
+
+        console.print(Panel(table, title=f"[bold {color}]{label} ({len(findings)})[/bold {color}]",
+                            border_style=color))
+        console.print()
+
+    # Heuristics
+    heuristics = data.get("heuristics", [])
+    if heuristics:
+        h_table = Table(box=box.SIMPLE, header_style="bold blue", padding=(0, 1))
+        h_table.add_column("Severity", width=10)
+        h_table.add_column("Category", width=18, style="dim")
+        h_table.add_column("Finding")
+
+        cat_labels = {
+            "disk_errors": "Disk", "other": "System",
+            "driver_issues": "Driver", "app_crashes": "App",
+            "service_failures": "Service",
+        }
+        for f in heuristics:
+            sev_c = _severity_color(f["severity"])
+            h_table.add_row(
+                f"[{sev_c}]{f['severity'].upper()}[/{sev_c}]",
+                cat_labels.get(f["category"], f["category"]),
+                f["message"],
+            )
+        console.print(Panel(h_table, title="[bold blue]Live System Checks[/bold blue]",
+                            border_style="blue"))
+        console.print()
+
+    if not any_events and not heuristics:
+        console.print(Panel(
+            "[bold green]No issues detected in the last 24 hours. System looks healthy.[/bold green]",
+            border_style="green",
+        ))
+        console.print()
+
+
 SECTION_RENDERERS = {
     "system": _render_system,
     "cpu": _render_cpu,

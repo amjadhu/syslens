@@ -4,7 +4,7 @@ from typing import Optional
 import typer
 from rich.console import Console
 
-from syslens.collectors import cpu, memory, disk, gpu, network, battery, software, processes, system
+from syslens.collectors import cpu, memory, disk, gpu, network, battery, software, processes, system, diagnose
 from syslens import display
 
 app = typer.Typer(
@@ -33,12 +33,21 @@ def _collect(sections):
 
 @app.command()
 def main(
-    json_output: bool = typer.Option(False, "--json", "-j", help="Output as JSON"),
+    json_output:   bool = typer.Option(False, "--json",     "-j", help="Output as JSON"),
+    run_diagnose:  bool = typer.Option(False, "--diagnose", "-d", help="Run system diagnostic report"),
     section: Optional[str] = typer.Option(
         None, "--section", "-s",
         help=f"Show only one section: {', '.join(SECTIONS)}"
     ),
 ):
+    if run_diagnose:
+        diag_data = diagnose.collect()
+        if json_output:
+            print(json.dumps(diag_data, indent=2, default=str))
+        else:
+            display.render_diagnose(diag_data)
+        raise typer.Exit(0)
+
     if section:
         if section not in SECTIONS:
             console.print(f"[red]Unknown section '{section}'. Choose from: {', '.join(SECTIONS)}[/red]")
