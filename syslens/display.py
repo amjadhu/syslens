@@ -206,6 +206,64 @@ def _severity_color(sev):
     return "red" if sev == "critical" else "yellow"
 
 
+CONCERN_COLORS = {
+    "fix_now":     "bold red",
+    "investigate": "yellow",
+    "monitor":     "cyan",
+    "ignore":      "dim",
+    "none":        "dim",
+}
+
+CONCERN_LABELS = {
+    "fix_now":     "FIX NOW",
+    "investigate": "INVESTIGATE",
+    "monitor":     "MONITOR",
+    "ignore":      "IGNORE",
+    "none":        "—",
+}
+
+
+def _concern_badge(concern: str) -> str:
+    c = CONCERN_COLORS.get(concern, "dim")
+    l = CONCERN_LABELS.get(concern, concern.upper())
+    return f"[{c}]{l}[/{c}]"
+
+
+def _action_items_panel(findings: list[dict], color: str) -> None:
+    """Render an action items panel for findings with investigate/fix_now concern."""
+    actionable = [
+        f for f in findings
+        if f.get("commentary", {}).get("concern") in ("investigate", "fix_now")
+    ]
+    if not actionable:
+        return
+
+    lines = []
+    for f in actionable:
+        c = f.get("commentary", {})
+        concern = c.get("concern", "none")
+        badge = _concern_badge(concern)
+        src = c.get("source", "none")
+        src_tag = f"[dim]({src})[/dim]" if src not in ("none", "") else ""
+        action = c.get("action", "")
+        explanation = c.get("explanation", "")
+        eid = f" [dim]#{f['id']}[/dim]" if f.get("id") else ""
+        provider = f.get("provider", "")
+        lines.append(
+            f"{badge}  [bold]{provider}{eid}[/bold] {src_tag}\n"
+            f"  [dim]{explanation}[/dim]\n"
+            f"  [white]{action}[/white]"
+        )
+
+    console.print(Panel(
+        "\n\n".join(lines),
+        title=f"[bold {color}]Action Items[/bold {color}]",
+        border_style=color,
+        padding=(1, 2),
+    ))
+    console.print()
+
+
 def render_diagnose(data):
     criticals = data["critical_count"]
     warnings  = data["warning_count"]
@@ -221,8 +279,17 @@ def render_diagnose(data):
         status_icon  = "[bold green]ALL CLEAR[/bold green]"
 
     console.print()
-    console.rule(f"[bold cyan]  SYSLENS DIAGNOSTIC REPORT  [/bold cyan]")
+    console.rule("[bold cyan]  SYSLENS DIAGNOSTIC REPORT  [/bold cyan]")
     console.print()
+
+    # Commentary note (shown when AI is unavailable or partially failed)
+    if data.get("commentary_note"):
+        console.print(Panel(
+            f"[dim]{data['commentary_note']}[/dim]",
+            title="[dim]AI Commentary[/dim]",
+            border_style="dim",
+        ))
+        console.print()
 
     summary = (
         f"Platform: [cyan]{data['platform']}[/cyan]  •  "
@@ -259,52 +326,60 @@ def render_diagnose(data):
 
         table = Table(box=box.SIMPLE, header_style=f"bold {color}", padding=(0, 1),
                       show_lines=False)
-        table.add_column("Sev",      width=8)
-        table.add_column("Time",     style="dim", width=19, no_wrap=True)
-        table.add_column("Source",   width=28, no_wrap=True)
-        table.add_column("ID",       justify="right", width=6, style="dim")
+        table.add_column("Sev",     width=8)
+        table.add_column("Time",    style="dim", width=19, no_wrap=True)
+        table.add_column("Source",  width=26, no_wrap=True)
+        table.add_column("ID",      justify="right", width=6, style="dim")
+        table.add_column("Concern", width=13)
         table.add_column("Message")
 
         for f in findings[:20]:
-            sev_c = _severity_color(f["severity"])
-            eid   = str(f["id"]) if f.get("id") else "—"
+            sev_c   = _severity_color(f["severity"])
+            eid     = str(f["id"]) if f.get("id") else "—"
+            concern = f.get("commentary", {}).get("concern", "none")
             table.add_row(
                 f"[{sev_c}]{f['severity'].upper()}[/{sev_c}]",
                 f.get("time", ""),
                 f.get("provider", ""),
                 eid,
+                _concern_badge(concern),
                 f.get("message", ""),
             )
         if len(findings) > 20:
-            table.add_row("", "", f"[dim]... and {len(findings) - 20} more[/dim]", "", "")
+            table.add_row("", "", f"[dim]... and {len(findings) - 20} more[/dim]", "", "", "")
 
         console.print(Panel(table, title=f"[bold {color}]{label} ({len(findings)})[/bold {color}]",
                             border_style=color))
         console.print()
+        _action_items_panel(findings, color)
 
     # Heuristics
     heuristics = data.get("heuristics", [])
     if heuristics:
-        h_table = Table(box=box.SIMPLE, header_style="bold blue", padding=(0, 1))
-        h_table.add_column("Severity", width=10)
-        h_table.add_column("Category", width=18, style="dim")
-        h_table.add_column("Finding")
-
         cat_labels = {
             "disk_errors": "Disk", "other": "System",
             "driver_issues": "Driver", "app_crashes": "App",
             "service_failures": "Service",
         }
+        h_table = Table(box=box.SIMPLE, header_style="bold blue", padding=(0, 1))
+        h_table.add_column("Severity", width=10)
+        h_table.add_column("Category", width=12, style="dim")
+        h_table.add_column("Concern",  width=13)
+        h_table.add_column("Finding")
+
         for f in heuristics:
-            sev_c = _severity_color(f["severity"])
+            sev_c   = _severity_color(f["severity"])
+            concern = f.get("commentary", {}).get("concern", "none")
             h_table.add_row(
                 f"[{sev_c}]{f['severity'].upper()}[/{sev_c}]",
                 cat_labels.get(f["category"], f["category"]),
+                _concern_badge(concern),
                 f["message"],
             )
         console.print(Panel(h_table, title="[bold blue]Live System Checks[/bold blue]",
                             border_style="blue"))
         console.print()
+        _action_items_panel(heuristics, "blue")
 
     if not any_events and not heuristics:
         console.print(Panel(

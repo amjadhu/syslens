@@ -234,6 +234,7 @@ def _heuristic_checks():
                         f"{round(u.total / (1024**3), 1)} GB)"
                     ),
                     "source": "heuristic",
+                    "heuristic_key": "disk_full_critical" if u.percent > 95 else "disk_full_warning",
                 })
         except (PermissionError, OSError):
             continue
@@ -249,6 +250,7 @@ def _heuristic_checks():
                 f"({round(vm.available / (1024**3), 2)} GB available)"
             ),
             "source": "heuristic",
+            "heuristic_key": "ram_critical",
         })
     elif vm.percent > 80:
         findings.append({
@@ -256,6 +258,7 @@ def _heuristic_checks():
             "severity": "warning",
             "message": f"RAM usage is elevated at {vm.percent:.1f}%",
             "source": "heuristic",
+            "heuristic_key": "ram_warning",
         })
 
     # Network errors
@@ -269,6 +272,7 @@ def _heuristic_checks():
                 f"{io.errout} outbound errors since last boot"
             ),
             "source": "heuristic",
+            "heuristic_key": "network_errors",
         })
 
     # CPU hogs — two-pass for accuracy
@@ -295,6 +299,7 @@ def _heuristic_checks():
                         f"is consuming {pct:.1f}% CPU"
                     ),
                     "source": "heuristic",
+                    "heuristic_key": "cpu_hog",
                 })
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             continue

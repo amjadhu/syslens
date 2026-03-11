@@ -5,7 +5,7 @@ import typer
 from rich.console import Console
 
 from syslens.collectors import cpu, memory, disk, gpu, network, battery, software, processes, system, diagnose
-from syslens import display
+from syslens import commentary, display
 
 app = typer.Typer(
     help="SysLens — Detailed cross-platform system information.",
@@ -39,9 +39,17 @@ def main(
         None, "--section", "-s",
         help=f"Show only one section: {', '.join(SECTIONS)}"
     ),
+    api_key: Optional[str] = typer.Option(
+        None, "--api-key",
+        help="Anthropic API key for AI commentary on unknown events (falls back to ANTHROPIC_API_KEY env var).",
+        envvar="ANTHROPIC_API_KEY",
+        show_default=False,
+        hide_input=True,
+    ),
 ):
     if run_diagnose:
         diag_data = diagnose.collect()
+        diag_data = commentary.annotate(diag_data, api_key=api_key)
         if json_output:
             print(json.dumps(diag_data, indent=2, default=str))
         else:
