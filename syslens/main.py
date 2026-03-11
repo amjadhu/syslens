@@ -5,7 +5,12 @@ import typer
 from rich.console import Console
 
 from syslens.collectors import cpu, memory, disk, gpu, network, battery, software, processes, system, diagnose
-from syslens import commentary, display
+from syslens.collectors.extended import (
+    gpu as gpu_ext, cpu as cpu_ext, memory as memory_ext,
+    disk as disk_ext, network as network_ext,
+    battery as battery_ext, system as system_ext,
+)
+from syslens import commentary, display, display_extended
 
 app = typer.Typer(
     help="SysLens — Detailed cross-platform system information.",
@@ -16,19 +21,35 @@ console = Console()
 SECTIONS = ["system", "cpu", "memory", "disk", "gpu", "network", "battery", "software", "processes"]
 
 
-def _collect(sections):
-    collectors = {
-        "system": system.collect,
-        "cpu": cpu.collect,
-        "memory": memory.collect,
-        "disk": disk.collect,
-        "gpu": gpu.collect,
-        "network": network.collect,
-        "battery": battery.collect,
-        "software": software.collect,
-        "processes": processes.collect,
-    }
-    return {s: collectors[s]() for s in sections}
+COLLECTORS = {
+    "system":    system.collect,
+    "cpu":       cpu.collect,
+    "memory":    memory.collect,
+    "disk":      disk.collect,
+    "gpu":       gpu.collect,
+    "network":   network.collect,
+    "battery":   battery.collect,
+    "software":  software.collect,
+    "processes": processes.collect,
+}
+
+COLLECTORS_EXTENDED = {
+    "system":  system_ext.collect_extended,
+    "cpu":     cpu_ext.collect_extended,
+    "memory":  memory_ext.collect_extended,
+    "disk":    disk_ext.collect_extended,
+    "gpu":     gpu_ext.collect_extended,
+    "network": network_ext.collect_extended,
+    "battery": battery_ext.collect_extended,
+    # software and processes fall back to standard collectors
+    "software":  software.collect,
+    "processes": processes.collect,
+}
+
+
+def _collect(sections, extended=False):
+    pool = COLLECTORS_EXTENDED if extended else COLLECTORS
+    return {s: pool[s]() for s in sections}
 
 
 @app.command()
@@ -60,16 +81,17 @@ def main(
         if section not in SECTIONS:
             console.print(f"[red]Unknown section '{section}'. Choose from: {', '.join(SECTIONS)}[/red]")
             raise typer.Exit(1)
-        sections = [section]
+        data = _collect([section], extended=True)
+        if json_output:
+            print(json.dumps(data, indent=2, default=str))
+        else:
+            display_extended.render_extended(data)
     else:
-        sections = SECTIONS
-
-    data = _collect(sections)
-
-    if json_output:
-        print(json.dumps(data, indent=2, default=str))
-    else:
-        display.render(data)
+        data = _collect(SECTIONS)
+        if json_output:
+            print(json.dumps(data, indent=2, default=str))
+        else:
+            display.render(data)
 
 
 if __name__ == "__main__":
