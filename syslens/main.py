@@ -9,6 +9,7 @@ from syslens.collectors.extended import (
     gpu as gpu_ext, cpu as cpu_ext, memory as memory_ext,
     disk as disk_ext, network as network_ext,
     battery as battery_ext, system as system_ext,
+    processes as processes_ext, software as software_ext,
 )
 from syslens import commentary, display, display_extended
 
@@ -41,9 +42,8 @@ COLLECTORS_EXTENDED = {
     "gpu":     gpu_ext.collect_extended,
     "network": network_ext.collect_extended,
     "battery": battery_ext.collect_extended,
-    # software and processes fall back to standard collectors
-    "software":  software.collect,
-    "processes": processes.collect,
+    "software":  software_ext.collect_extended,
+    "processes": processes_ext.collect_extended,
 }
 
 

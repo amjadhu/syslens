@@ -466,16 +466,158 @@ def render_system(data):
         console.print()
 
 
+# ── Processes ────────────────────────────────────────────────────────────────
+
+def render_processes(data):
+    console.print()
+    console.rule("[bold green]  Processes — Extended Detail  [/bold green]")
+    console.print()
+
+    total = data.get("total", 0)
+    status_counts = data.get("status_counts", {})
+
+    # Summary
+    status_str = "  ".join(
+        f"[dim]{k}[/dim]: [cyan]{v}[/cyan]"
+        for k, v in sorted(status_counts.items(), key=lambda x: -x[1])
+    )
+    console.print(Panel(
+        f"Total: [bold cyan]{total}[/bold cyan]  |  {status_str}",
+        title="[bold green]Process Summary[/bold green]",
+        border_style="green",
+    ))
+    console.print()
+
+    def _proc_table(procs, title, sort_col):
+        t = Table(box=box.SIMPLE, header_style="bold green", padding=(0, 1))
+        t.add_column("PID",     justify="right", width=7, style="dim")
+        t.add_column("Name",    width=22, no_wrap=True)
+        t.add_column("CPU%",    justify="right", width=7)
+        t.add_column("MEM%",    justify="right", width=7)
+        t.add_column("RSS MB",  justify="right", width=8)
+        t.add_column("Threads", justify="right", width=8)
+        t.add_column("User",    width=14, style="dim", no_wrap=True)
+        t.add_column("Started", width=9, style="dim")
+        t.add_column("Command", no_wrap=True)
+
+        for p in procs:
+            cpu_pct = p.get("cpu_percent", 0)
+            mem_pct = p.get("memory_percent", 0)
+            cpu_c = "green" if cpu_pct < 10 else "yellow" if cpu_pct < 50 else "red"
+            mem_c = "green" if mem_pct < 5  else "yellow" if mem_pct < 15  else "red"
+            t.add_row(
+                str(p.get("pid", "")),
+                p.get("name", ""),
+                f"[{cpu_c}]{cpu_pct:.1f}[/{cpu_c}]",
+                f"[{mem_c}]{mem_pct:.2f}[/{mem_c}]",
+                str(p.get("rss_mb", "")),
+                str(p.get("num_threads", "")),
+                (p.get("username") or "")[:14],
+                p.get("started", ""),
+                p.get("cmdline", ""),
+            )
+        return Panel(t, title=f"[bold green]{title}[/bold green]", border_style="green")
+
+    console.print(_proc_table(data.get("top_cpu", []),    "Top 15 by CPU",    "cpu"))
+    console.print()
+    console.print(_proc_table(data.get("top_memory", []), "Top 15 by Memory", "mem"))
+    console.print()
+
+
+# ── Software ──────────────────────────────────────────────────────────────────
+
+def render_software(data):
+    console.print()
+    console.rule("[bold blue]  Software — Extended Detail  [/bold blue]")
+    console.print()
+
+    # Installed runtimes with paths
+    installed = data.get("installed", {})
+    if installed:
+        t = Table(box=box.SIMPLE, header_style="bold blue", padding=(0, 1))
+        t.add_column("Runtime", style="cyan bold", width=12)
+        t.add_column("Version")
+        t.add_column("Path", style="dim")
+        for name, info in installed.items():
+            if isinstance(info, dict):
+                t.add_row(name, info.get("version", "N/A"), info.get("path", "N/A"))
+            else:
+                t.add_row(name, str(info), "N/A")
+        console.print(Panel(t, title="[bold blue]Installed Runtimes[/bold blue]",
+                            border_style="blue"))
+        console.print()
+
+    # pip packages
+    pip_pkgs = data.get("pip_packages", [])
+    pip_outdated = data.get("pip_outdated", [])
+    outdated_names = {p["name"].lower() for p in pip_outdated}
+
+    if pip_pkgs:
+        t = Table(box=box.SIMPLE, header_style="bold cyan", padding=(0, 1),
+                  title=f"Python Packages ({len(pip_pkgs)} installed, "
+                        f"[yellow]{len(pip_outdated)} outdated[/yellow])")
+        t.add_column("Package", width=28)
+        t.add_column("Version",  width=16)
+        t.add_column("Status",   width=10)
+        for pkg in sorted(pip_pkgs, key=lambda x: x["name"].lower()):
+            is_out = pkg["name"].lower() in outdated_names
+            outdated_entry = next((p for p in pip_outdated
+                                   if p["name"].lower() == pkg["name"].lower()), None)
+            status = f"[yellow]-> {outdated_entry['latest_version']}[/yellow]" \
+                     if outdated_entry else "[dim]up to date[/dim]"
+            t.add_row(pkg["name"], pkg["version"], status)
+        console.print(Panel(t, title="[bold cyan]pip Packages[/bold cyan]",
+                            border_style="cyan"))
+        console.print()
+
+    # npm global packages
+    npm_pkgs = data.get("npm_global", {})
+    if npm_pkgs:
+        t = Table(box=box.SIMPLE, header_style="bold yellow", padding=(0, 1))
+        t.add_column("Package", style="cyan", width=30)
+        t.add_column("Version")
+        for name, version in sorted(npm_pkgs.items()):
+            t.add_row(name, version)
+        console.print(Panel(t, title=f"[bold yellow]npm Global Packages ({len(npm_pkgs)})[/bold yellow]",
+                            border_style="yellow"))
+        console.print()
+
+    # Environment variables
+    env_vars = data.get("env_vars", {})
+    if env_vars:
+        t = Table(box=box.SIMPLE, header_style="bold magenta", padding=(0, 1))
+        t.add_column("Variable",  style="cyan", width=22)
+        t.add_column("Value",     style="dim")
+        for k, v in sorted(env_vars.items()):
+            t.add_row(k, v[:80])
+        console.print(Panel(t, title="[bold magenta]Dev Environment Variables[/bold magenta]",
+                            border_style="magenta"))
+        console.print()
+
+    # PATH entries
+    path_entries = data.get("path_entries", [])
+    if path_entries:
+        t = Table(box=box.SIMPLE, header_style="bold dim", padding=(0, 1))
+        t.add_column("#",    justify="right", width=4, style="dim")
+        t.add_column("Path", style="dim")
+        for i, entry in enumerate(path_entries, 1):
+            t.add_row(str(i), entry)
+        console.print(Panel(t, title="[bold]PATH Entries[/bold]", border_style="dim"))
+        console.print()
+
+
 # ── Router ────────────────────────────────────────────────────────────────────
 
 SECTION_EXTENDED_RENDERERS = {
-    "gpu":      render_gpu,
-    "cpu":      render_cpu,
-    "memory":   render_memory,
-    "disk":     render_disk,
-    "network":  render_network,
-    "battery":  render_battery,
-    "system":   render_system,
+    "gpu":       render_gpu,
+    "cpu":       render_cpu,
+    "memory":    render_memory,
+    "disk":      render_disk,
+    "network":   render_network,
+    "battery":   render_battery,
+    "system":    render_system,
+    "processes": render_processes,
+    "software":  render_software,
 }
 
 
