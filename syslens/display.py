@@ -411,3 +411,74 @@ def render(data):
         if section in data:
             renderer(data)
             console.print()
+
+
+# ── Stack Dump ─────────────────────────────────────────────────────────────────
+
+_METHOD_LABELS = {
+    "py-spy":         ("py-spy", "green"),
+    "cdb":            ("Windows Debugger (cdb)", "cyan"),
+    "dbghelp":        ("DbgHelp.dll (native)", "cyan"),
+    "gdb":            ("GDB", "cyan"),
+    "lldb":           ("LLDB", "cyan"),
+    "psutil-threads": ("psutil (thread IDs only)", "yellow"),
+    "none":           ("none", "red"),
+}
+
+
+def render_dump(data):
+    console.print()
+
+    if "error" in data:
+        console.print(Panel(
+            f"[red]{data['error']}[/red]",
+            title="[bold red]Stack Dump — Error[/bold red]",
+            border_style="red",
+        ))
+        return
+
+    name = data.get("name", "?")
+    pid  = data.get("pid", "?")
+    console.rule(f"[bold magenta]  Stack Dump — {name} (PID {pid})  [/bold magenta]")
+    console.print()
+
+    # Process metadata
+    method_key = data.get("method", "none")
+    label, color = _METHOD_LABELS.get(method_key, (method_key, "white"))
+
+    meta = Table(box=box.SIMPLE, show_header=False, padding=(0, 1))
+    meta.add_column("k", style="dim", no_wrap=True, min_width=16)
+    meta.add_column("v", style="cyan")
+    meta.add_row("Status",      data.get("status", "?"))
+    meta.add_row("Executable",  data.get("exe") or "[dim]N/A[/dim]")
+    meta.add_row("Command",     data.get("cmdline") or "[dim]N/A[/dim]")
+    meta.add_row("User",        data.get("username") or "[dim]N/A[/dim]")
+    meta.add_row("Threads",     str(data.get("num_threads", "?")))
+    meta.add_row("Trace method", f"[{color}]{label}[/{color}]")
+    console.print(meta)
+    console.print()
+
+    threads = data.get("threads") or []
+
+    if not threads:
+        console.print("[dim]No thread data captured.[/dim]")
+        console.print()
+        return
+
+    for t in threads:
+        header = t.get("header", "Thread")
+        frames = t.get("frames", [])
+        console.rule(f"[bold]{header}[/bold]", style="dim")
+        if frames:
+            for f in frames:
+                from rich.markup import escape
+                console.print(f"  [dim]·[/dim] {escape(f)}")
+        else:
+            console.print("  [dim](no frames)[/dim]")
+        console.print()
+
+    # Show raw output below if structured parse was partial
+    raw = (data.get("raw") or "").strip()
+    if raw and method_key in ("cdb", "gdb", "lldb") and not threads:
+        console.print(Panel(raw, title="[dim]Raw debugger output[/dim]",
+                            border_style="dim", expand=False))

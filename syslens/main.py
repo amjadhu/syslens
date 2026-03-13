@@ -4,7 +4,7 @@ from typing import Optional
 import typer
 from rich.console import Console
 
-from syslens.collectors import cpu, memory, disk, gpu, network, battery, software, processes, system, diagnose
+from syslens.collectors import cpu, memory, disk, gpu, network, battery, software, processes, system, diagnose, stack_dump
 from syslens.collectors.extended import (
     gpu as gpu_ext, cpu as cpu_ext, memory as memory_ext,
     disk as disk_ext, network as network_ext,
@@ -67,7 +67,20 @@ def main(
         show_default=False,
         hide_input=True,
     ),
+    dump: Optional[str] = typer.Option(
+        None, "--dump",
+        help="Dump stack trace for a process. Accepts a PID or process name.",
+        show_default=False,
+    ),
 ):
+    if dump is not None:
+        dump_data = stack_dump.collect_dump(dump)
+        if json_output:
+            print(json.dumps(dump_data, indent=2, default=str))
+        else:
+            display.render_dump(dump_data)
+        raise typer.Exit(0)
+
     if run_diagnose:
         diag_data = diagnose.collect()
         diag_data = commentary.annotate(diag_data, api_key=api_key)

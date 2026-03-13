@@ -14,7 +14,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-ai = ["anthropic>=0.25"]
+ai   = ["anthropic>=0.25"]
+dump = ["py-spy>=0.3"]
 
 [project.scripts]
 syslens = "syslens.main:app"

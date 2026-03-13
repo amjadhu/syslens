@@ -9,6 +9,7 @@ syslens                          # full system overview
 syslens --section <name>         # extended detail for one section
 syslens --diagnose               # event log + heuristic health check
 syslens --diagnose --api-key sk-... # same + Claude AI commentary
+syslens --dump <pid|name>        # stack dump for a process
 syslens --json                   # any mode as JSON output
 ```
 
@@ -16,9 +17,24 @@ Section names: `system`, `cpu`, `memory`, `disk`, `gpu`, `network`, `battery`, `
 
 ## Install (dev mode)
 ```bash
-pip install -e .          # core
-pip install -e ".[ai]"    # + Anthropic SDK for --diagnose AI commentary
+pip install -e .           # core
+pip install -e ".[ai]"     # + Anthropic SDK for --diagnose AI commentary
+pip install -e ".[dump]"   # + py-spy for Python process stack traces
 ```
+
+### Setting up --dump on a new machine
+```bash
+python scripts/setup_dump.py
+```
+This installs py-spy, WinDbg (Windows), and sets `_NT_SYMBOL_PATH`. Open a new terminal after running it.
+
+**Symbol resolution tiers for `--dump` (best → fallback):**
+| Method | Gives you | Requires |
+|--------|-----------|----------|
+| py-spy | Python-level frames with file + line | `pip install py-spy` |
+| cdb.exe | Full native stacks + PDB symbols | Windows SDK Debugging Tools |
+| DbgHelp.dll + PE exports | Native stacks, exported fn names | nothing (built into Windows) |
+| psutil threads | Thread IDs + CPU time only | nothing |
 
 ## Architecture
 
@@ -50,8 +66,10 @@ Used only with `--diagnose`. Two-layer fallback:
 | `syslens/display.py` | Rich rendering for full overview (all 9 sections) |
 | `syslens/display_extended.py` | Rich rendering for single-section extended detail |
 | `syslens/collectors/diagnose.py` | Windows Event Log + heuristic health checks |
+| `syslens/collectors/stack_dump.py` | Process stack trace collector (py-spy / DbgHelp / gdb / lldb) |
 | `syslens/commentary/engine.py` | Static KB lookup + Claude API fallback |
 | `syslens/commentary/knowledge_base.py` | Windows Event ID → commentary mappings |
+| `scripts/setup_dump.py` | One-shot setup script for `--dump` dependencies |
 | `pyproject.toml` | Build config, deps, entry point |
 
 ## Sections & Their Extended Collectors
@@ -84,3 +102,4 @@ Used only with `--diagnose`. Two-layer fallback:
 - `rich` — terminal UI
 - `typer` — CLI framework
 - `anthropic` (optional) — AI commentary in `--diagnose`
+- `py-spy` (optional) — Python process stack traces in `--dump`
