@@ -282,6 +282,27 @@ def render_disk(data):
                             border_style="magenta"))
         console.print()
 
+    # Top folders by size
+    top_folders = data.get("top_folders", {})
+    for mountpoint, folders in top_folders.items():
+        if not folders:
+            continue
+        t = Table(box=box.SIMPLE, header_style="bold magenta", padding=(0, 1))
+        t.add_column("#", justify="right", width=4, style="dim")
+        t.add_column("Folder")
+        t.add_column("Size", justify="right")
+        for i, f in enumerate(folders, 1):
+            size = f["size_gb"]
+            if size >= 1:
+                size_str = f"{size:.2f} GB"
+            else:
+                size_str = f"{size * 1024:.0f} MB"
+            t.add_row(str(i), f["path"], size_str)
+        console.print(Panel(t,
+                            title=f"[bold magenta]Top Folders by Size — {mountpoint}[/bold magenta]",
+                            border_style="magenta"))
+        console.print()
+
 
 # ── Network ───────────────────────────────────────────────────────────────────
 

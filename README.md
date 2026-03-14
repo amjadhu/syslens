@@ -69,7 +69,7 @@ syslens --diagnose --json
 | **system** | OS, hostname, uptime, boot time | BIOS/board info, SecureBoot, TPM |
 | **cpu** | Usage %, cores, frequency, temp | L1/L2/L3 cache, virtualization, power plan, per-core freq |
 | **memory** | RAM/swap used/total | DIMM slots, speed, capacity, manufacturer |
-| **disk** | Partitions, usage %, I/O stats | SMART health, physical drives, model/firmware |
+| **disk** | Partitions, usage %, I/O stats | SMART health, physical drives, top 5 folders by size |
 | **gpu** | GPU name, VRAM | DirectX version, connected displays, driver date |
 | **network** | Interfaces, IP, I/O stats | WiFi SSID/channel/signal, DNS, gateway, routing |
 | **battery** | Charge %, status, time remaining | Wear %, cycle count, charge rate, chemistry |
