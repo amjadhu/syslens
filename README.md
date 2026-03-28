@@ -7,6 +7,7 @@ A cross-platform CLI for detailed system information and diagnostics. Get a rich
 - Full system overview: CPU, memory, disk, GPU, network, battery, software, processes
 - Extended detail per section (cache levels, DIMM slots, SMART health, WiFi signal, etc.)
 - System health diagnostics from Windows Event Log + heuristic checks
+- Restart history — why the system last rebooted (power loss, crash, update, user shutdown)
 - Optional AI-powered commentary on events via Claude API
 - JSON output mode for scripting/automation
 
@@ -54,12 +55,19 @@ export ANTHROPIC_API_KEY=sk-ant-...
 syslens --diagnose
 ```
 
+### Restart history
+```bash
+syslens --reboot
+```
+Shows why the system last restarted — power loss, crash (BSOD), Windows Update, user shutdown, or other clean restart. Displays a summary and a full event timeline. Works on Windows (Event IDs 41, 1074, 6005, 6006, 6008) and macOS (`last reboot` + `pmset`).
+
 ### JSON output
 Any command can output JSON:
 ```bash
 syslens --json
 syslens --section disk --json
 syslens --diagnose --json
+syslens --reboot --json
 ```
 
 ## What Each Section Shows
@@ -95,6 +103,7 @@ Events are categorized (driver issues, disk errors, service failures, app crashe
 | Basic overview | Full | Full | Full |
 | Extended sections | Full | Partial | Minimal |
 | `--diagnose` | Full | Partial | - |
+| `--reboot` | Full | Partial | - |
 
 ## Requirements
 

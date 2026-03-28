@@ -10,6 +10,7 @@ syslens --section <name>         # extended detail for one section
 syslens --diagnose               # event log + heuristic health check
 syslens --diagnose --api-key sk-... # same + Claude AI commentary
 syslens --dump <pid|name>        # stack dump for a process
+syslens --reboot                 # show why the system last restarted
 syslens --json                   # any mode as JSON output
 ```
 
@@ -66,6 +67,7 @@ Used only with `--diagnose`. Two-layer fallback:
 | `syslens/display.py` | Rich rendering for full overview (all 9 sections) |
 | `syslens/display_extended.py` | Rich rendering for single-section extended detail |
 | `syslens/collectors/diagnose.py` | Windows Event Log + heuristic health checks |
+| `syslens/collectors/reboot.py` | Last restart reason collector (Event IDs 41, 1074, 6005, 6006, 6008) |
 | `syslens/collectors/stack_dump.py` | Process stack trace collector (py-spy / DbgHelp / gdb / lldb) |
 | `syslens/commentary/engine.py` | Static KB lookup + Claude API fallback |
 | `syslens/commentary/knowledge_base.py` | Windows Event ID → commentary mappings |

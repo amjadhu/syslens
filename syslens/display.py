@@ -389,6 +389,94 @@ def render_diagnose(data):
         console.print()
 
 
+_KIND_LABELS = {
+    "boot":           "BOOT",
+    "clean_shutdown": "SHUTDOWN",
+    "shutdown":       "SHUTDOWN",
+    "restart":        "RESTART",
+    "power_loss":     "POWER LOSS",
+    "crash":          "CRASH",
+    "unexpected":     "UNEXPECTED",
+    "unknown":        "?",
+}
+
+
+def render_reboot(data):
+    console.print()
+    console.rule("[bold cyan]  REBOOT HISTORY  [/bold cyan]")
+    console.print()
+
+    kind   = data.get("last_kind", "unknown")
+    color  = data.get("last_color", "dim")
+    reason = data.get("last_reason", "Unknown")
+
+    # Plain-English cause summary
+    cause_explanations = {
+        "restart":        "The system was restarted normally (e.g. by the user or an update).",
+        "shutdown":       "The system was shut down cleanly before this boot.",
+        "clean_shutdown": "The system was shut down cleanly before this boot.",
+        "power_loss":     "The system lost power or was hard-reset without a normal shutdown.",
+        "crash":          "The system crashed (Blue Screen / kernel panic) and rebooted.",
+        "unexpected":     "The system restarted unexpectedly — possible power or hardware issue.",
+        "boot":           "Only a boot event was found; the prior shutdown event is not in the log.",
+        "unknown":        "Could not determine the reason — event log may not have enough history.",
+    }
+    explanation = cause_explanations.get(kind, "")
+
+    summary_lines = [
+        f"Last boot:  [cyan]{data['last_boot']}[/cyan]  •  Uptime: [cyan]{data['uptime']}[/cyan]",
+        f"Restart cause: [{color}]{reason}[/{color}]",
+    ]
+    if explanation:
+        summary_lines.append(f"[dim]{explanation}[/dim]")
+    if data.get("error"):
+        summary_lines.append(f"[dim red]Note: {data['error']}[/dim red]")
+
+    console.print(Panel(
+        "\n".join(summary_lines),
+        title="[bold cyan]Last Restart[/bold cyan]",
+        border_style="cyan",
+    ))
+    console.print()
+
+    timeline = data.get("timeline", [])
+    if not timeline:
+        console.print(Panel(
+            "[dim]No reboot-related events found in the System event log.[/dim]",
+            border_style="dim",
+        ))
+        console.print()
+        return
+
+    table = Table(box=box.SIMPLE, header_style="bold white", padding=(0, 1), show_lines=False)
+    table.add_column("Time",        style="dim", width=19, no_wrap=True)
+    table.add_column("Event",       width=11, no_wrap=True)
+    table.add_column("Description", min_width=30, max_width=60, no_wrap=True)
+    table.add_column("Source",      style="dim", width=22, no_wrap=True)
+
+    for ev in timeline:
+        ev_color = ev.get("color", "white")
+        ev_kind  = ev.get("kind", "unknown")
+        tag      = _KIND_LABELS.get(ev_kind, ev_kind.upper())
+        label    = ev.get("label", "")
+        # Truncate long labels so the table stays readable
+        if len(label) > 58:
+            label = label[:55] + "…"
+        table.add_row(
+            ev.get("time", ""),
+            f"[{ev_color}]{tag}[/{ev_color}]",
+            label,
+            ev.get("provider", ""),
+        )
+
+    console.print(Panel(
+        table,
+        title="[bold white]Event Timeline (newest first)[/bold white]",
+        border_style="white",
+    ))
+    console.print()
+
+
 SECTION_RENDERERS = {
     "system": _render_system,
     "cpu": _render_cpu,

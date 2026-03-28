@@ -4,7 +4,7 @@ from typing import Optional
 import typer
 from rich.console import Console
 
-from syslens.collectors import cpu, memory, disk, gpu, network, battery, software, processes, system, diagnose, stack_dump
+from syslens.collectors import cpu, memory, disk, gpu, network, battery, software, processes, system, diagnose, stack_dump, reboot
 from syslens.collectors.extended import (
     gpu as gpu_ext, cpu as cpu_ext, memory as memory_ext,
     disk as disk_ext, network as network_ext,
@@ -72,7 +72,16 @@ def main(
         help="Dump stack trace for a process. Accepts a PID or process name.",
         show_default=False,
     ),
+    show_reboot: bool = typer.Option(False, "--reboot", "-r", help="Show why the system last restarted"),
 ):
+    if show_reboot:
+        reboot_data = reboot.collect()
+        if json_output:
+            print(json.dumps(reboot_data, indent=2, default=str))
+        else:
+            display.render_reboot(reboot_data)
+        raise typer.Exit(0)
+
     if dump is not None:
         dump_data = stack_dump.collect_dump(dump)
         if json_output:
